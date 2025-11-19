@@ -28,16 +28,38 @@ This library is **read-only by default** to ensure safe access to production eve
 
 ## Quick Start
 
-### 1. Add Dependency
+### 1. Add Repository and Dependency
+
+Add the GitHub Packages repository to your `build.gradle.kts`:
 
 ```kotlin
+repositories {
+    mavenCentral()
+    maven {
+        url = uri("https://maven.pkg.github.com/milehimikey/axon-jpa-connector")
+        credentials {
+            username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
+            password = project.findProperty("gpr.token") as String? ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
+
 dependencies {
-    implementation("com.axon:axon-jpa-connector:1.0.0")
-    
+    implementation("wtf.milehimikey:axon-jpa-connector:1.0.0")
+
     // Add your database driver
     runtimeOnly("org.postgresql:postgresql") // or mysql, h2, etc.
 }
 ```
+
+**Note**: GitHub Packages requires authentication even for public packages. You'll need to:
+1. Create a [GitHub Personal Access Token](https://github.com/settings/tokens) with `read:packages` scope
+2. Add it to your `~/.gradle/gradle.properties`:
+   ```properties
+   gpr.user=your-github-username
+   gpr.token=your-github-token
+   ```
+   Or set environment variables `GITHUB_ACTOR` and `GITHUB_TOKEN`
 
 ### 2. Configure Database (Read-Only)
 
