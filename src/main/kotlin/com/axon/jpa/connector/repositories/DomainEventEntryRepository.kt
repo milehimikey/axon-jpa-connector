@@ -27,6 +27,7 @@ package com.axon.jpa.connector.repositories
 import com.axon.jpa.connector.entities.DomainEventEntry
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Query
@@ -106,8 +107,27 @@ interface DomainEventEntryRepository : JpaRepository<DomainEventEntry, Long>, Jp
      * Find the latest sequence number for an aggregate.
      */
     @Query("""
-        SELECT MAX(d.sequenceNumber) FROM DomainEventEntry d 
+        SELECT MAX(d.sequenceNumber) FROM DomainEventEntry d
         WHERE d.aggregateIdentifier = :aggregateId
     """)
     fun findMaxSequenceNumberByAggregateIdentifier(@Param("aggregateId") aggregateIdentifier: String): Long?
+
+    /**
+     * Find events by sequence number range.
+     */
+    fun findByAggregateIdentifierAndSequenceNumberBetween(
+        aggregateIdentifier: String,
+        fromSequence: Long,
+        toSequence: Long,
+        sort: Sort
+    ): List<DomainEventEntry>
+
+    /**
+     * Find events from a specific sequence number.
+     */
+    fun findByAggregateIdentifierAndSequenceNumberGreaterThanEqual(
+        aggregateIdentifier: String,
+        fromSequence: Long,
+        sort: Sort
+    ): List<DomainEventEntry>
 }

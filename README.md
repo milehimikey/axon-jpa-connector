@@ -92,6 +92,66 @@ interface TokenEntryRepository : JpaRepository<TokenEntry, TokenEntryId> {
 }
 ```
 
+## Event Stream - Loading Aggregates
+
+The library provides an `EventStream` interface for loading events without deserializing payloads, similar to Axon Framework's aggregate loading capabilities:
+
+```kotlin
+@Service
+class MyService(private val eventStream: EventStream) {
+
+    // Load all events for an aggregate
+    fun loadAggregateHistory(aggregateId: String): List<DomainEventEntry> {
+        return eventStream.load(aggregateId)
+    }
+
+    // Load events from a specific sequence number
+    fun loadRecentEvents(aggregateId: String, fromSequence: Long): List<DomainEventEntry> {
+        return eventStream.load(aggregateId, fromSequence)
+    }
+
+    // Load events in a range
+    fun loadEventRange(aggregateId: String, from: Long, to: Long): List<DomainEventEntry> {
+        return eventStream.load(aggregateId, from, to)
+    }
+
+    // Load with filtering criteria
+    fun loadSpecificEventTypes(aggregateId: String, eventTypes: Set<String>): List<DomainEventEntry> {
+        val criteria = EventLoadingCriteria(payloadTypes = eventTypes)
+        return eventStream.load(aggregateId, criteria)
+    }
+
+    // Load optimized view with snapshot + subsequent events
+    fun loadCurrentState(aggregateId: String): AggregateEventStream {
+        return eventStream.loadEventsSinceSnapshot(aggregateId)
+    }
+}
+```
+
+### Working with Raw Event Data
+
+The library provides extension functions for working with event payloads without deserialization:
+
+```kotlin
+val events = eventStream.load("user-123")
+
+events.forEach { event ->
+    println("Event: ${event.payloadType}")
+
+    // Handle JSON payloads
+    if (event.isJsonPayload()) {
+        println("JSON Payload: ${event.payloadAsString()}")
+    } else {
+        println("Binary payload of ${event.payload.size} bytes")
+    }
+
+    // Access metadata if present
+    if (event.hasMetaData()) {
+        println("Metadata: ${event.metaDataAsString()}")
+    }
+}
+```
+
 ## Configuration
 
 Customize the library behavior with configuration properties:

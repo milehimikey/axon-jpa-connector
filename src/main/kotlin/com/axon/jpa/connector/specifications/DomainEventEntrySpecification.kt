@@ -124,6 +124,15 @@ object DomainEventEntrySpecification {
     }
 
     /**
+     * Filter by payload types in the given set.
+     */
+    fun hasPayloadTypeIn(payloadTypes: Set<String>): Specification<DomainEventEntry> {
+        return Specification { root, _, criteriaBuilder ->
+            root.get<String>("payloadType").`in`(payloadTypes)
+        }
+    }
+
+    /**
      * Combine multiple specifications with AND.
      */
     fun and(specifications: List<Specification<DomainEventEntry>>): Specification<DomainEventEntry> {
