@@ -28,7 +28,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 
 /**
  * Configuration properties for Axon JPA Connector.
- * These properties allow customization of the library behavior.
+ * This library is designed for read-only access to existing Axon event stores
+ * for troubleshooting and data analysis purposes.
  */
 @ConfigurationProperties(prefix = "axon.jpa")
 data class AxonJpaProperties(
@@ -49,6 +50,13 @@ data class AxonJpaProperties(
      * Default: true
      */
     val enableCustomDialect: Boolean = true,
+
+    /**
+     * Whether to allow write operations to the database.
+     * Default: false (read-only mode for data analysis and troubleshooting)
+     * Set to true only for testing or specific use cases where writes are needed.
+     */
+    val allowWrites: Boolean = false,
     
     /**
      * Entity configuration settings.

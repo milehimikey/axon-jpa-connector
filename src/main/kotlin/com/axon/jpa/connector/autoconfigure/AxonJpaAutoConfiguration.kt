@@ -36,11 +36,15 @@ import jakarta.persistence.EntityManager
 
 /**
  * Auto-configuration for Axon JPA Connector.
- * 
+ *
+ * This library is designed for read-only access to existing Axon event stores
+ * for troubleshooting and data analysis purposes.
+ *
  * This configuration automatically:
  * - Enables entity scanning for Axon JPA entities
- * - Enables JPA repositories for Axon repositories
+ * - Enables JPA repositories for Axon repositories (read-only by default)
  * - Sets up configuration properties
+ * - Configures read-only mode by default to prevent accidental data modification
  */
 @AutoConfiguration
 @ConditionalOnClass(EntityManager::class)
@@ -61,6 +65,12 @@ class AxonJpaAutoConfiguration(
     
     init {
         logger.info("Axon JPA Connector auto-configuration enabled")
+        logger.info("Read-only mode: {} (allowWrites={})", !properties.allowWrites, properties.allowWrites)
+        if (!properties.allowWrites) {
+            logger.info("Library configured for read-only access to existing event stores")
+        } else {
+            logger.warn("Write operations are enabled - use with caution!")
+        }
         logger.debug("Axon JPA properties: {}", properties)
         
         // Log enabled entities

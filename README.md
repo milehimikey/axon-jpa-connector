@@ -1,9 +1,23 @@
 # Axon JPA Connector
 
-A Spring Boot library providing JPA entities and repositories for Axon Framework applications. This library offers ready-to-use JPA mappings for all Axon Framework storage needs, including domain events, snapshots, sagas, tokens, and dead letter queues.
+A Spring Boot library for **read-only access** to existing Axon Framework event stores. Designed primarily for **data analysis, troubleshooting, and reporting** on production event stores without the risk of accidental data modification.
+
+## 🔒 Read-Only by Design
+
+This library is **read-only by default** to ensure safe access to production event stores:
+
+- ✅ **No accidental writes** - Read-only repositories prevent data modification
+- ✅ **No schema creation** - Safe to connect to existing production databases
+- ✅ **Data analysis focus** - Rich querying and statistics for troubleshooting
+- ✅ **Event store inspection** - Understand event patterns and aggregate behavior
+
+> **Note**: Write operations can be enabled for testing environments by setting `axon.jpa.allow-writes=true`
 
 ## Features
 
+- 🔒 **Read-Only by Default** - Safe access to production event stores
+- 📊 **Event Analysis** - Rich querying and statistics for troubleshooting
+- 🔍 **Aggregate Inspection** - Load events without deserialization
 - ✅ **Complete JPA Entities** - All Axon Framework storage entities included
 - ✅ **Ready-to-use Repositories** - Spring Data JPA repositories with custom queries
 - ✅ **Auto-Configuration** - Works out-of-the-box with Spring Boot
@@ -25,34 +39,49 @@ dependencies {
 }
 ```
 
-### 2. Configure Database
+### 2. Configure Database (Read-Only)
 
 ```yaml
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/mydb
-    username: myuser
-    password: mypass
+    url: jdbc:postgresql://localhost:5432/existing_event_store
+    username: readonly_user  # Use read-only database user
+    password: readonly_pass
   jpa:
     hibernate:
-      ddl-auto: validate # or create-drop for development
+      ddl-auto: none  # NEVER modify existing schema
+    show-sql: false
+
+# Axon JPA Connector - Read-only configuration
+axon:
+  jpa:
+    allow-writes: false  # Default: read-only mode
+    schema: axon_events  # If events are in specific schema
 ```
 
-### 3. Use Repositories
+### 3. Analyze Event Data
 
 ```kotlin
 @Service
-class EventService(
-    private val domainEventRepository: DomainEventEntryRepository,
-    private val tokenRepository: TokenEntryRepository
+class EventAnalysisService(
+    private val eventStream: EventStream  // ReadOnlyEventStream by default
 ) {
-    
-    fun getEventsForAggregate(aggregateId: String): List<DomainEventEntry> {
-        return domainEventRepository.findByAggregateIdentifier(aggregateId)
+
+    fun analyzeAggregate(aggregateId: String): AggregateAnalysis {
+        // Load all events for analysis
+        val events = eventStream.load(aggregateId, 0)
+        val snapshot = eventStream.loadLatestSnapshot(aggregateId)
+
+        return AggregateAnalysis(
+            eventCount = events.size,
+            latestSequence = events.maxOfOrNull { it.sequenceNumber } ?: 0,
+            hasSnapshot = snapshot != null,
+            eventTypes = events.map { it.payloadType }.distinct()
+        )
     }
-    
-    fun getProcessorTokens(processorName: String): List<TokenEntry> {
-        return tokenRepository.findByProcessorName(processorName)
+
+    fun troubleshootEventFlow(aggregateId: String, fromSequence: Long): List<DomainEventEntry> {
+        return eventStream.load(aggregateId, fromSequence)
     }
 }
 ```
@@ -69,6 +98,46 @@ The library provides the following JPA entities:
 | `SagaEntry` | Saga instances | `saga_entry` |
 | `AssociationValueEntry` | Saga associations | `association_value_entry` |
 | `DeadLetterEntry` | Failed message entries | `dead_letter_entry` |
+
+## Read-Only Mode
+
+### Default Behavior
+
+By default, the library operates in **read-only mode** to ensure safe access to production event stores:
+
+```yaml
+axon:
+  jpa:
+    allow-writes: false  # Default: read-only mode
+```
+
+### Read-Only Repositories
+
+When in read-only mode, the library provides specialized repositories that expose only query methods:
+
+- `ReadOnlyDomainEventEntryRepository` - Query-only access to events
+- `ReadOnlySnapshotEventEntryRepository` - Query-only access to snapshots
+- No save, delete, or modification methods available
+
+### Enabling Writes (Testing Only)
+
+For testing environments, you can enable write operations:
+
+```yaml
+# application-test.yml
+axon:
+  jpa:
+    allow-writes: true
+    database:
+      create-schema: true  # Only for tests
+```
+
+### Safety Features
+
+- **Schema Protection**: No automatic table creation in production
+- **Write Prevention**: Read-only repositories prevent accidental modifications
+- **Clear Logging**: Startup logs indicate read-only vs write mode
+- **Production Focus**: Designed for connecting to existing event stores
 
 ## Repositories
 
@@ -154,34 +223,67 @@ events.forEach { event ->
 
 ## Configuration
 
-Customize the library behavior with configuration properties:
+### Production Configuration (Read-Only)
+
+For connecting to existing production event stores:
 
 ```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/production_event_store
+    username: readonly_user
+    password: readonly_password
+  jpa:
+    hibernate:
+      ddl-auto: none  # NEVER modify production schema
+    show-sql: false
+
 axon:
   jpa:
-    # Database schema (optional)
-    schema: axon_framework
-    
-    # Table prefix (optional)
-    table-prefix: "axon_"
-    
-    # Enable custom PostgreSQL dialect
+    # Read-only mode (default)
+    allow-writes: false
+
+    # Database schema (if events are in specific schema)
+    schema: axon_events
+
+    # Table prefix (if your tables have prefixes)
+    table-prefix: ""
+
+    # Enable custom PostgreSQL dialect for BYTEA handling
     enable-custom-dialect: true
-    
-    # Entity configuration
+
+    # Enable only entities you need for analysis
     entities:
-      domain-events: true
-      snapshots: true
-      tokens: true
-      sagas: true
-      dead-letters: true
-      associations: true
-    
+      domain-events: true   # Essential for event analysis
+      snapshots: true       # Essential for aggregate analysis
+      tokens: false         # Disable if not needed
+      sagas: false          # Disable if not needed
+      dead-letters: false   # Disable if not needed
+      associations: false   # Disable if not needed
+
     # Database settings
     database:
-      type: postgresql # auto, postgresql, mysql, h2
-      create-schema: false
-      validate-schema: true
+      type: postgresql      # auto, postgresql, mysql, h2
+      create-schema: false  # NEVER create schema in production
+      validate-schema: true # Validate expected tables exist
+```
+
+### Testing Configuration (Writes Enabled)
+
+For test environments where you need to create test data:
+
+```yaml
+# application-test.yml
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+axon:
+  jpa:
+    allow-writes: true      # Enable writes for testing
+    database:
+      create-schema: true   # Allow schema creation in tests
 ```
 
 ## Advanced Usage
@@ -249,58 +351,121 @@ Contributions are welcome! Please read our contributing guidelines and submit pu
 
 ## Examples
 
-### Basic Usage Example
+### Event Store Analysis Tool
 
 ```kotlin
 @SpringBootApplication
-class MyApplication
+class EventAnalysisApplication
 
 @RestController
-class EventController(
-    private val domainEventRepository: DomainEventEntryRepository
+class EventAnalysisController(
+    private val eventStream: EventStream,
+    private val domainEventRepository: ReadOnlyDomainEventEntryRepository
 ) {
 
-    @GetMapping("/events/{aggregateId}")
-    fun getEvents(@PathVariable aggregateId: String): List<DomainEventEntry> {
-        return domainEventRepository.findByAggregateIdentifier(aggregateId)
+    @GetMapping("/analysis/{aggregateId}")
+    fun analyzeAggregate(@PathVariable aggregateId: String): AggregateAnalysis {
+        val events = eventStream.load(aggregateId, 0)
+        val snapshot = eventStream.loadLatestSnapshot(aggregateId)
+
+        return AggregateAnalysis(
+            aggregateId = aggregateId,
+            eventCount = events.size,
+            latestSequence = events.maxOfOrNull { it.sequenceNumber } ?: 0,
+            hasSnapshot = snapshot != null,
+            eventTypes = events.map { it.payloadType }.distinct(),
+            firstEventTime = events.minOfOrNull { it.timeStamp },
+            lastEventTime = events.maxOfOrNull { it.timeStamp }
+        )
     }
 
-    @GetMapping("/events/stats")
-    fun getStats(): Map<String, Any> {
-        return mapOf(
-            "totalEvents" to domainEventRepository.count(),
-            "totalAggregates" to domainEventRepository.countDistinctAggregateIdentifiers(),
-            "totalPayloadTypes" to domainEventRepository.countDistinctPayloadTypes()
+    @GetMapping("/stats")
+    fun getEventStoreStats(): EventStoreStats {
+        return EventStoreStats(
+            totalEvents = domainEventRepository.count(),
+            totalAggregates = domainEventRepository.countDistinctAggregateIdentifiers(),
+            payloadTypes = domainEventRepository.findDistinctPayloadTypes(),
+            payloadTypeDistribution = domainEventRepository.countByPayloadType()
         )
+    }
+
+    @GetMapping("/troubleshoot/{aggregateId}")
+    fun troubleshootAggregate(
+        @PathVariable aggregateId: String,
+        @RequestParam(defaultValue = "0") fromSequence: Long
+    ): List<EventSummary> {
+        return eventStream.load(aggregateId, fromSequence).map { event ->
+            EventSummary(
+                sequenceNumber = event.sequenceNumber,
+                eventType = event.payloadType,
+                timestamp = event.timeStamp,
+                hasMetadata = event.hasMetaData(),
+                payloadSize = event.payload.size
+            )
+        }
     }
 }
 ```
 
-### Testing Example
+### Testing Examples
+
+#### Read-Only Analysis Test
 
 ```kotlin
 @DataJpaTest
-class EventRepositoryTest {
+@TestPropertySource(properties = ["axon.jpa.allow-writes=false"])
+class ReadOnlyEventAnalysisTest {
+
+    @Autowired
+    private lateinit var eventStream: EventStream  // Will be ReadOnlyEventStream
+
+    @Autowired
+    private lateinit var testEntityManager: TestEntityManager
+
+    @Test
+    fun `should analyze existing events`() {
+        // Assume events already exist in test database
+        val events = eventStream.load("existing-aggregate-123", 0)
+
+        assertThat(events).isNotEmpty()
+        assertThat(events.first().payloadType).isEqualTo("SomeEvent")
+    }
+}
+```
+
+#### Write-Enabled Test (For Testing Library Features)
+
+```kotlin
+@DataJpaTest
+@TestPropertySource(properties = [
+    "axon.jpa.allow-writes=true",
+    "spring.jpa.hibernate.ddl-auto=create-drop"
+])
+class EventStreamTest {
+
+    @Autowired
+    private lateinit var eventStream: EventStream  // Will be JPAEventStream
 
     @Autowired
     private lateinit var domainEventRepository: DomainEventEntryRepository
 
     @Test
-    fun `should save and retrieve events`() {
+    fun `should save and load events`() {
         val event = DomainEventEntry(
             aggregateIdentifier = "test-123",
             sequenceNumber = 1L,
+            type = "TestEvent",
             eventIdentifier = "event-456",
             payload = "test".toByteArray(),
             payloadType = "TestEvent",
             timeStamp = Instant.now().toString()
         )
 
-        val saved = domainEventRepository.save(event)
-        val found = domainEventRepository.findByAggregateIdentifier("test-123")
+        domainEventRepository.save(event)
+        val loaded = eventStream.load("test-123", 0)
 
-        assertThat(found).hasSize(1)
-        assertThat(found[0].eventIdentifier).isEqualTo("event-456")
+        assertThat(loaded).hasSize(1)
+        assertThat(loaded[0].eventIdentifier).isEqualTo("event-456")
     }
 }
 ```
