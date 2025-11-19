@@ -7,7 +7,7 @@ plugins {
     `java-library`
 }
 
-group = "com.axon"
+group = "wtf.milehimikey"
 version = "1.0.0"
 description = "Axon Framework JPA Connector Library"
 
@@ -34,19 +34,19 @@ dependencies {
     api("org.springframework.boot:spring-boot-starter-data-jpa")
     api("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-autoconfigure")
-    
+
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-    
+
     // Jackson for JSON handling
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    
+
     // Database drivers (optional)
     compileOnly("org.postgresql:postgresql")
     compileOnly("com.mysql:mysql-connector-j")
     compileOnly("com.h2database:h2")
-    
+
     // Test dependencies
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
@@ -77,19 +77,19 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             from(components["java"])
-            
+
             pom {
                 name.set("Axon JPA Connector")
                 description.set("A Spring Boot library providing JPA entities and repositories for Axon Framework")
                 url.set("https://github.com/milehimikey/axon-jpa-connector")
-                
+
                 licenses {
                     license {
                         name.set("MIT License")
                         url.set("https://opensource.org/licenses/MIT")
                     }
                 }
-                
+
                 developers {
                     developer {
                         id.set("milehimikey")
@@ -97,7 +97,7 @@ publishing {
                         email.set("milehimikey@gmail.com")
                     }
                 }
-                
+
                 scm {
                     connection.set("scm:git:git://github.com/milehimikey/axon-jpa-connector.git")
                     developerConnection.set("scm:git:ssh://github.com:milehimikey/axon-jpa-connector.git")
