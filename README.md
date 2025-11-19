@@ -343,7 +343,7 @@ Use with Flyway or Liquibase for automated schema management.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+APACHE License - see [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
