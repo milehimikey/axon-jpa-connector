@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: axon-jpa-connector-sample
+  
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.axon.jpa.connector: DEBUG
+    org.springframework.data.jpa: DEBUG
+
+# Axon JPA Connector configuration
+axon:
+  jpa:
+    entities:
+      domain-events: true
+      snapshots: true
+      tokens: true
+      sagas: true
+      dead-letters: true
+      associations: true
+    database:
+      type: h2
+      validate-schema: false
