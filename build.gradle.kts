@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "wtf.milehimikey"
-version = "1.0.0"
+version = "1.0.2"
 description = "Axon Framework JPA Connector Library"
 
 java {

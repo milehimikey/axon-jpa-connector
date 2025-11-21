@@ -1,13 +1,13 @@
 spring:
   application:
     name: axon-jpa-connector-sample
-  
+
   datasource:
     url: jdbc:h2:mem:testdb
     driver-class-name: org.h2.Driver
     username: sa
-    password: 
-  
+    password:
+
   jpa:
     hibernate:
       ddl-auto: create-drop
@@ -15,7 +15,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
-  
+
   h2:
     console:
       enabled: true
@@ -26,7 +26,7 @@ server:
 
 logging:
   level:
-    com.axon.jpa.connector: DEBUG
+    wtf.milehimikey.jpa.connector: DEBUG
     org.springframework.data.jpa: DEBUG
 
 # Axon JPA Connector configuration
